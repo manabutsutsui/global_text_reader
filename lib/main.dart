@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_ml_kit/google_ml_kit.dart';
 import 'dart:io';
 
 void main() {
@@ -33,31 +34,65 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final ImagePicker _picker = ImagePicker();
+  final textRecognizer = TextRecognizer();
+  final TextEditingController _textController = TextEditingController();
   File? _image;
+  bool _isProcessing = false;
 
-  // カメラで写真を撮影
+  @override
+  void dispose() {
+    textRecognizer.close();
+    _textController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _processImage() async {
+    if (_image == null) return;
+
+    setState(() {
+      _isProcessing = true;
+      _textController.text = '';
+    });
+
+    try {
+      final inputImage = InputImage.fromFile(_image!);
+      final recognizedText = await textRecognizer.processImage(inputImage);
+
+      setState(() {
+        _textController.text = recognizedText.text;
+        _isProcessing = false;
+      });
+    } catch (e) {
+      setState(() {
+        _textController.text = '文字認識に失敗しました: $e';
+        _isProcessing = false;
+      });
+    }
+  }
+
   Future<void> _takePhoto() async {
     try {
       final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
       if (photo == null) return;
-      
+
       setState(() {
         _image = File(photo.path);
       });
+      await _processImage();
     } catch (e) {
       print('Error taking photo: $e');
     }
   }
 
-  // ギャラリーから写真を選択
   Future<void> _pickImage() async {
     try {
       final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
       if (image == null) return;
-      
+
       setState(() {
         _image = File(image.path);
       });
+      await _processImage();
     } catch (e) {
       print('Error picking image: $e');
     }
@@ -70,33 +105,67 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            if (_image != null)
-              Container(
-                margin: const EdgeInsets.all(16),
-                // height: 200,
-                child: Image.file(_image!),
+      body: SingleChildScrollView(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              if (_image != null)
+                Container(
+                  margin: const EdgeInsets.all(16),
+                  child: Image.file(_image!),
+                ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _takePhoto,
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text('写真を撮影'),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: _pickImage,
+                    icon: const Icon(Icons.photo_library),
+                    label: const Text('画像を選択'),
+                  ),
+                ],
               ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _takePhoto,
-                  icon: const Icon(Icons.camera_alt),
-                  label: const Text('写真を撮影'),
+              const SizedBox(height: 20),
+              if (_isProcessing)
+                const CircularProgressIndicator()
+              else if (_textController.text.isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '認識されたテキスト:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _textController,
+                        maxLines: null,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          hintText: 'テキストを編集できます',
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: _pickImage,
-                  icon: const Icon(Icons.photo_library),
-                  label: const Text('画像を選択'),
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
