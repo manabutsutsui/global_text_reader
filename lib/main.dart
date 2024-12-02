@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'dart:io';
 
 void main() {
@@ -36,16 +37,48 @@ class _MyHomePageState extends State<MyHomePage> {
   final ImagePicker _picker = ImagePicker();
   final textRecognizer = TextRecognizer();
   final TextEditingController _textController = TextEditingController();
+  final FlutterTts flutterTts = FlutterTts();
   File? _image;
   bool _isProcessing = false;
+  bool _isSpeaking = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initTts();
+  }
+
+  // TTSの初期設定
+  Future<void> _initTts() async {
+    await flutterTts.setLanguage('en-US');
+    await flutterTts.setSpeechRate(0.3);
+    await flutterTts.setVolume(1.0);
+    await flutterTts.setPitch(1.0);
+  }
+
+  // テキスト読み上げ開始
+  Future<void> _speak() async {
+    if (_textController.text.isNotEmpty) {
+      setState(() => _isSpeaking = true);
+      await flutterTts.speak(_textController.text);
+    }
+  }
+
+  // 読み上げ停止
+  Future<void> _stop() async {
+    setState(() => _isSpeaking = false);
+    await flutterTts.stop();
+  }
 
   @override
   void dispose() {
     textRecognizer.close();
     _textController.dispose();
+    flutterTts.stop();
     super.dispose();
   }
 
+  // テキスト認識処理
   Future<void> _processImage() async {
     if (_image == null) return;
 
@@ -101,69 +134,80 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
-      ),
+      backgroundColor: const Color(0xFFF5F5F5),
       body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
+              const SizedBox(height: 48),
               if (_image != null)
-                Container(
-                  margin: const EdgeInsets.all(16),
+                SizedBox(
+                  height: 300,
                   child: Image.file(_image!),
                 ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              const SizedBox(height: 16),
+              if (_isProcessing)
+                const CircularProgressIndicator()
+              else if (_textController.text.isNotEmpty)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Recognized text:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: _isSpeaking ? _stop : _speak,
+                          icon:
+                              Icon(_isSpeaking ? Icons.stop : Icons.volume_up),
+                          tooltip: _isSpeaking ? 'Stop' : 'Speak',
+                        ),
+                      ],
+                    ),
+                    const Text(
+                      'You can modify the recognized text.',
+                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _textController,
+                      maxLines: 10,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'Edit the text',
+                      ),
+                    ),
+                  ],
+                ),
+              const SizedBox(height: 16),
+              Column(
                 children: [
                   ElevatedButton.icon(
                     onPressed: _takePhoto,
                     icon: const Icon(Icons.camera_alt),
-                    label: const Text('写真を撮影'),
+                    label: const Text('Take a photo'),
                   ),
+                  const SizedBox(height: 4),
+                  const Text('or',
+                      style:
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
                   ElevatedButton.icon(
                     onPressed: _pickImage,
                     icon: const Icon(Icons.photo_library),
-                    label: const Text('画像を選択'),
+                    label: const Text('Select an image'),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              if (_isProcessing)
-                const CircularProgressIndicator()
-              else if (_textController.text.isNotEmpty)
-                Container(
-                  margin: const EdgeInsets.all(16),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        '認識されたテキスト:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _textController,
-                        maxLines: null,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          hintText: 'テキストを編集できます',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              const SizedBox(height: 16),
             ],
           ),
         ),
