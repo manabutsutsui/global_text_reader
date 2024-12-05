@@ -41,3 +41,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Google Mobile Ads
+/ios/Runner/GoogleService-Info.plist
+
+# Configs
+/assets/configs/config.json
+
+

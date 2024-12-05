@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "971906820653",
+    "project_id": "global-text-reader",
+    "storage_bucket": "global-text-reader.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:971906820653:android:a1b50ec21019c6d3aa26a4",
+        "android_client_info": {
+          "package_name": "com.ts"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBceoHSHpX0_hRCrGk38VZ1XUaJEd6U_ew"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
