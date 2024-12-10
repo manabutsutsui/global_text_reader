@@ -234,7 +234,7 @@ class _HomePageState extends State<HomePage> {
                             style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 32),
                   ],
                 ),
               Column(

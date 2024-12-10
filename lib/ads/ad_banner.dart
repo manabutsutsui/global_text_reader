@@ -42,7 +42,6 @@ class AdBannerState extends State<AdBanner> {
           });
         },
         onAdFailedToLoad: (ad, error) {
-          // print('Ad failed to load: $error');
           ad.dispose();
         },
       ),
