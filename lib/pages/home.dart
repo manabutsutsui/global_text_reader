@@ -114,11 +114,11 @@ class _HomePageState extends State<HomePage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Enter a title'),
+          title: const Text('タイトルを入力'),
           content: TextField(
             autofocus: true,
             decoration: const InputDecoration(
-              hintText: 'Enter a title',
+              hintText: 'タイトルを入力してください',
             ),
             onChanged: (value) {
               title = value;
@@ -127,11 +127,11 @@ class _HomePageState extends State<HomePage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: const Text('キャンセル'),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, title),
-              child: const Text('Save'),
+              child: const Text('保存'),
             ),
           ],
         );
@@ -159,11 +159,11 @@ class _HomePageState extends State<HomePage> {
           .add(voiceData.toMap());
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Saved.')),
+        const SnackBar(content: Text('保存しました')),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save: $e')),
+        SnackBar(content: Text('保存に失敗しました: $e')),
       );
     }
   }
@@ -171,95 +171,208 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
+        elevation: 0,
         backgroundColor: Colors.black,
-        title: const Text('Home',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Select a photo',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              if (_image != null)
-                SizedBox(
-                  height: 300,
-                  child: Image.file(_image!),
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 10,
+                    offset: Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 16),
+                  if (_image != null)
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 20),
+                      height: 250,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Image.file(
+                          _image!,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildActionButton(
+                        icon: Icons.camera_alt,
+                        label: 'Camera',
+                        onPressed: _takePhoto,
+                      ),
+                      _buildActionButton(
+                        icon: Icons.photo_library,
+                        label: 'Gallery',
+                        onPressed: _pickImage,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 30),
+                ],
+              ),
+            ),
+            if (_isProcessing)
+              const Padding(
+                padding: EdgeInsets.all(20),
+                child: CircularProgressIndicator(),
+              )
+            else if (_textController.text.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
-              const SizedBox(height: 16),
-              if (_isProcessing)
-                const CircularProgressIndicator()
-              else if (_textController.text.isNotEmpty)
-                Column(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          'Recognized text:',
+                          'Recognized text',
                           style: TextStyle(
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                            color: Colors.black87,
                           ),
                         ),
                         IconButton(
                           onPressed: _isSpeaking ? _stop : _speak,
-                          icon: Icon(_isSpeaking ? Icons.stop : Icons.volume_up),
-                          tooltip: _isSpeaking ? 'Stop' : 'Speak',
+                          icon: Icon(
+                            _isSpeaking ? Icons.stop_circle : Icons.play_circle,
+                            color: Colors.black,
+                            size: 32,
+                          ),
                         ),
                       ],
                     ),
-                    const Text(
-                      'You can modify the recognized text.',
-                      style: TextStyle(fontSize: 14, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 15),
                     TextField(
                       controller: _textController,
-                      maxLines: 10,
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        hintText: 'Edit the text',
+                      maxLines: 8,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: const Color.fromARGB(255, 233, 233, 233),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: BorderSide.none,
+                        ),
+                        hintText: 'Edit text',
+                        hintStyle: TextStyle(color: Colors.grey[400]),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Center(
-                      child: ElevatedButton.icon(
-                        onPressed: _saveToFirestore,
-                        icon: const Icon(Icons.save),
-                        label: const Text('Save',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: _saveToFirestore,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.save, color: Colors.white),
+                          SizedBox(width: 8),
+                          Text(
+                            'Save',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 32),
                   ],
                 ),
-              Column(
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: _takePhoto,
-                    icon: const Icon(Icons.camera_alt),
-                    label: const Text('Take a photo',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text('or',
-                      style:
-                          TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  ElevatedButton.icon(
-                    onPressed: _pickImage,
-                    icon: const Icon(Icons.photo_library),
-                    label: const Text('Select an image',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                ],
               ),
-            ],
-          ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ],
         ),
       ),
     );

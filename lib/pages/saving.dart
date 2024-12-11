@@ -45,6 +45,34 @@ class _SavingPageState extends State<SavingPage> {
   }
 
   Future<void> _deleteVoiceData(String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('削除の確認'),
+          content: const Text('このテキストを削除してもよろしいですか？'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('キャンセル'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(
+                '削除',
+                style: TextStyle(color: Colors.red[400]),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
     try {
       await FirebaseFirestore.instance
           .collection('voice_data')
@@ -52,11 +80,24 @@ class _SavingPageState extends State<SavingPage> {
           .delete();
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Deleted')),
+        const SnackBar(
+          content: Text('削除しました'),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(10)),
+          ),
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete: $e')),
+        SnackBar(
+          content: Text('削除に失敗しました: $e'),
+          behavior: SnackBarBehavior.floating,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(10)),
+          ),
+        ),
       );
     }
   }
@@ -64,19 +105,30 @@ class _SavingPageState extends State<SavingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
+        elevation: 0,
         backgroundColor: Colors.black,
-        title: const Text('Saving',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Saved Audio',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
       ),
       body: FutureBuilder<String>(
         future: DeviceId.getId(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+              ),
+            );
           }
-      
+
           return StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('voice_data')
@@ -85,61 +137,162 @@ class _SavingPageState extends State<SavingPage> {
                 .snapshots(),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline,
+                          size: 48, color: Colors.red[400]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'エラーが発生しました: ${snapshot.error}',
+                        style: TextStyle(color: Colors.grey[600]),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                );
               }
-      
+
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                  ),
+                );
               }
-      
+
               final voiceDataList = snapshot.data!.docs.map((doc) {
                 return VoiceData.fromMap(
                   doc.id,
                   doc.data() as Map<String, dynamic>,
                 );
               }).toList();
-      
+
               if (voiceDataList.isEmpty) {
-                return const Center(
-                    child: Text('A list of saved data will be displayed here.'));
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.note_alt_outlined,
+                        size: 80,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        '保存したテキストはありません',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'テキストを認識して保存してみましょう',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
               }
-      
+
               return ListView.builder(
+                padding: const EdgeInsets.all(16),
                 itemCount: voiceDataList.length,
                 itemBuilder: (context, index) {
                   final voiceData = voiceDataList[index];
                   final docId = snapshot.data!.docs[index].id;
                   final isPlaying = _playingId == docId;
-      
-                  return Padding(
-                    padding: const EdgeInsets.only(left: 8.0),
-                    child: ListTile(
-                      title: Text(voiceData.title,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                      subtitle: Text(
-                        voiceData.createdAt.toLocal().toString().split('.')[0],
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: Icon(isPlaying ? Icons.stop : Icons.play_arrow),
-                            onPressed: () {
-                              if (isPlaying) {
-                                _stop();
-                              } else {
-                                _speak(voiceData.text, docId);
-                              }
-                            },
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ListTile(
+                          contentPadding: const EdgeInsets.all(8),
+                          title: Text(
+                            voiceData.title,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.delete),
-                            onPressed: () => _deleteVoiceData(docId),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 8),
+                              Text(
+                                voiceData.text,
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 14,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                voiceData.createdAt
+                                    .toLocal()
+                                    .toString()
+                                    .split('.')[0],
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  isPlaying
+                                      ? Icons.stop_circle
+                                      : Icons.play_circle,
+                                  color: Colors.black,
+                                  size: 32,
+                                ),
+                                onPressed: () {
+                                  if (isPlaying) {
+                                    _stop();
+                                  } else {
+                                    _speak(voiceData.text, docId);
+                                  }
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.red[400],
+                                  size: 28,
+                                ),
+                                onPressed: () => _deleteVoiceData(docId),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 },
