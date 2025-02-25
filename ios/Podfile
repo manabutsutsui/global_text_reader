@@ -40,5 +40,13 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+    
+    # MLKitの日本語認識のために必要な設定を追加
+    target.build_configurations.each do |config|
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
+        '$(inherited)',
+        'MLKIT_JAPANESE=1'
+      ]
+    end
   end
 end
